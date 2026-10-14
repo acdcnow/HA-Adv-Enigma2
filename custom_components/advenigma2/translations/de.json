@@ -1,0 +1,64 @@
+{
+  "config": {
+    "abort": {
+      "already_configured": "[%key:common::config_flow::abort::already_configured_device%]",
+      "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
+      "invalid_auth": "[%key:common::config_flow::error::invalid_auth%]",
+      "unknown": "[%key:common::config_flow::error::unknown%]",
+      "unique_id_mismatch": "Das ist ein anderes Gerät als das bereits konfigurierte."
+    },
+    "error": {
+      "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
+      "invalid_auth": "[%key:common::config_flow::error::invalid_auth%]",
+      "unknown": "[%key:common::config_flow::error::unknown%]"
+    },
+    "flow_title": "{name}",
+    "step": {
+      "user": {
+        "data": {
+          "host": "[%key:common::config_flow::data::host%]",
+          "password": "[%key:common::config_flow::data::password%]",
+          "port": "[%key:common::config_flow::data::port%]",
+          "ssl": "[%key:common::config_flow::data::ssl%]",
+          "username": "[%key:common::config_flow::data::username%]",
+          "verify_ssl": "[%key:common::config_flow::data::verify_ssl%]"
+        },
+        "description": "Bitte gib die Verbindungsdaten deines Geräts ein."
+      },
+      "reconfigure": {
+        "data": {
+          "host": "[%key:common::config_flow::data::host%]",
+          "password": "[%key:common::config_flow::data::password%]",
+          "port": "[%key:common::config_flow::data::port%]",
+          "ssl": "[%key:common::config_flow::data::ssl%]",
+          "username": "[%key:common::config_flow::data::username%]",
+          "verify_ssl": "[%key:common::config_flow::data::verify_ssl%]"
+        },
+        "description": "Verbindungsdaten von {name} anpassen. Das Gerät und seine Entitäten bleiben erhalten.",
+        "title": "Adv Enigma2 neu konfigurieren"
+      },
+      "reauth_confirm": {
+        "data": {
+          "password": "[%key:common::config_flow::data::password%]",
+          "username": "[%key:common::config_flow::data::username%]"
+        },
+        "description": "Gib die Zugangsdaten von {name} erneut ein.",
+        "title": "Erneut anmelden"
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "deep_standby": "Ausschalten in den Deep-Standby",
+          "source_bouquet": "Als Medienquelle verwendetes Bouquet",
+          "use_channel_icon": "Senderlogo als Medienbild anzeigen"
+        },
+        "data_description": {
+          "deep_standby": "Das Gerät in den Deep-Standby (Herunterfahren) statt in den Standby-Modus versetzen."
+        }
+      }
+    }
+  }
+}

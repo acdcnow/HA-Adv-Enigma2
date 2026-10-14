@@ -1,0 +1,40 @@
+# Verification for the Adv Enigma2 integration, Home Assistant 2026.10.1.
+#
+# Unlike a stubbed harness this installs the real Home Assistant release the
+# integration targets (pytest-homeassistant-custom-component pins exactly
+# homeassistant==2026.10.1) and runs the integration against it, with the Enigma2
+# box replaced by tests/fakes.py.
+
+name: Verify
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+
+      - name: Install Home Assistant 2026.10.1 and the test harness
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "pytest-homeassistant-custom-component==0.13.372" "openwebifpy==4.3.1"
+
+      - name: Home Assistant 2026.10.1 contract
+        run: python tests/verify_ha_2026_contract.py
+
+      - name: Unit tests
+        run: python -m pytest tests -q

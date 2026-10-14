@@ -1,0 +1,19 @@
+{
+  "domain": "advenigma2",
+  "name": "Adv Enigma2 (OpenWebif)",
+  "codeowners": [
+    "@acdcnow"
+  ],
+  "config_flow": true,
+  "documentation": "https://github.com/acdcnow/HA-Adv-emigma2",
+  "integration_type": "device",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/acdcnow/HA-Adv-emigma2/issues",
+  "loggers": [
+    "openwebif"
+  ],
+  "requirements": [
+    "openwebifpy==4.3.1"
+  ],
+  "version": "1.0.0"
+}
