@@ -1,6 +1,11 @@
 send_message:
   name: Send a message
   description: Show a message on the TV screen of the box.
+  target:
+    device:
+      integration: advenigma2
+    entity:
+      integration: advenigma2
   fields:
     message:
       name: Message
@@ -34,6 +39,11 @@ send_message:
 send_remote_control:
   name: Send a remote control key
   description: Press a key on the remote control of the box.
+  target:
+    device:
+      integration: advenigma2
+    entity:
+      integration: advenigma2
   fields:
     command:
       name: Key
@@ -56,6 +66,11 @@ send_remote_control:
 add_timer:
   name: Add a timer
   description: Add a recording timer to the box.
+  target:
+    device:
+      integration: advenigma2
+    entity:
+      integration: advenigma2
   fields:
     channel:
       name: Channel
@@ -124,6 +139,11 @@ add_timer:
 remove_timer:
   name: Remove a timer
   description: Delete a recording timer from the box.
+  target:
+    device:
+      integration: advenigma2
+    entity:
+      integration: advenigma2
   fields:
     channel:
       name: Channel
@@ -144,6 +164,11 @@ remove_timer:
 delete_recording:
   name: Delete a recording
   description: Delete a recording from the hard disk of the box.
+  target:
+    device:
+      integration: advenigma2
+    entity:
+      integration: advenigma2
   fields:
     recording:
       name: Recording
@@ -161,6 +186,11 @@ delete_recording:
 rename_recording:
   name: Rename a recording
   description: Rename a recording on the hard disk of the box.
+  target:
+    device:
+      integration: advenigma2
+    entity:
+      integration: advenigma2
   fields:
     recording:
       name: Recording
