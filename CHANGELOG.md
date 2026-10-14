@@ -4,6 +4,25 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1b0] - 2026-10-14
+
+### Fixed
+
+* **Setup and reconfigure no longer fail with "Unknown error occurred"** when the
+  address is entered the way a browser takes it. A scheme (`https://10.0.0.30`), a
+  port (`192.168.1.23:8080`), a path (`enigma2.local/statusinfo`) or a trailing
+  slash used to be handed to `URL.build()` verbatim, which raised a `ValueError`
+  (`Host 'https://10.0.0.30' cannot contain ':' (at position 5)`) that the flow
+  reported as an unknown error. The host is now split into host, port and scheme:
+  a scheme decides *Use HTTPS*, a port in the address wins over the port field, and
+  what remains is stored in the entry. An address that has no usable host shows a
+  translated error (`invalid_host`) instead of an exception.
+* **The setup dialog is translated again.** The field labels, error and abort texts
+  used the `[%key:common::config_flow::…%]` references of Home Assistant core, which
+  the frontend only resolves for the built-in translations — in a HACS install the
+  labels showed up as the raw placeholder (`[%key:common::config_flow::data::host%]`).
+  They are literal texts now, in English and German.
+
 ## [1.1.0] - 2026-10-14
 
 Everything OpenWebif on **OpenATV 8.0** offers beyond the media player is now part

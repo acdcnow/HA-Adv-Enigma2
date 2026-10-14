@@ -92,7 +92,7 @@ do not share a domain, a device or an entity namespace.
 
 | Setting | Where | Notes |
 |---|---|---|
-| Host, port, SSL, verify SSL, username, password | Setup, then **Reconfigure** | The host is used as the entry title. |
+| Host, port, SSL, verify SSL, username, password | Setup, then **Reconfigure** | The host is used as the entry title. The address may be typed with a scheme, a port or a path (`https://10.0.0.30`, `box:8080`, `box/statusinfo`) and is split into the fields automatically. |
 | Turn off to Deep Standby | **Options** | Shuts the box down instead of standby. |
 | Bouquet to use as media source | **Options** | Limits the source list to one bouquet. |
 | Show channel icon as media image | **Options** | Channel picon instead of the standard image. |
@@ -140,8 +140,8 @@ python -m venv .venv
 # Windows only: the Home Assistant test harness needs two POSIX modules
 Copy-Item tests\shims\*.py .venv\Lib\site-packages\ -Force
 
-.\\.venv\\Scripts\\python.exe tests\\verify_ha_2026_contract.py   # 157 API contract checks
-.\\.venv\\Scripts\\python.exe -m pytest tests -q                 # 65 unit tests
+.\\.venv\\Scripts\\python.exe tests\\verify_ha_2026_contract.py   # 175 API contract checks
+.\\.venv\\Scripts\\python.exe -m pytest tests -q                 # 80 unit tests
 ```
 
 * `tests/verify_ha_2026_contract.py`  asserts that every Home Assistant and

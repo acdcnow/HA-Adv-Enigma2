@@ -1,6 +1,7 @@
 """Config flow for Adv Enigma2."""
 
 import logging
+import re
 from collections.abc import Mapping
 from typing import Any, cast, override
 
@@ -47,6 +48,8 @@ from .const import (
     DOMAIN,
 )
 
+HTTP_SCHEMES = ("http", "https")
+
 CONFIG_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_HOST): selector.TextSelector(),
@@ -70,6 +73,60 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def clean_connection_input(user_input: Mapping[str, Any]) -> dict[str, Any]:
+    """Return the connection data with an address that yarl can build a URL from.
+
+    People type the address of the box the way a browser takes it — with a scheme,
+    a port or a trailing slash — while the rest of the integration expects the bare
+    host name. Everything else is split off here: a scheme decides `ssl`, a port in
+    the address wins over the port field. Passing `https://box` to `URL.build()`
+    used to raise a `ValueError` that surfaced as "Unknown error occurred".
+    """
+    data = dict(user_input)
+    address = str(data.get(CONF_HOST) or "").strip()
+
+    scheme, separator, rest = address.partition("://")
+    if separator:
+        address = rest.strip()
+        if scheme.strip().lower() in HTTP_SCHEMES:
+            data[CONF_SSL] = scheme.strip().lower() == "https"
+
+    # only the authority of a URL matters, drop a path, a query or a fragment
+    address = re.split(r"[/?#]", address, maxsplit=1)[0].strip()
+
+    host, port = _split_port(address)
+    if port is not None:
+        data[CONF_PORT] = port
+    data[CONF_HOST] = host
+    return data
+
+
+def _split_port(address: str) -> tuple[str, int | None]:
+    """Split `host:port` (and `[ipv6]:port`) from an address.
+
+    A port is only taken from the address when it really is one, so a bare IPv6
+    address keeps its colons.
+    """
+    if address.startswith("[") and "]" in address:
+        host, _, remainder = address[1:].partition("]")
+        return host, _port_number(remainder.removeprefix(":"))
+
+    if address.count(":") == 1:
+        host, _, port = address.partition(":")
+        if (number := _port_number(port)) is not None:
+            return host, number
+
+    return address, None
+
+
+def _port_number(port: str) -> int | None:
+    """Return the port of an address, if it is a usable one."""
+    port = port.strip()
+    if port.isdigit() and 1 <= int(port) <= 65535:
+        return int(port)
+    return None
 
 # Reauthentication only asks for the credentials, everything else is kept from
 # the existing entry; use reconfigure to change the host or the port.
@@ -137,19 +194,26 @@ class AdvEnigma2ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
         errors = None
 
         existing_entry_id = current_entry.entry_id if current_entry else None
+        host = str(user_input.get(CONF_HOST) or "")
 
-        if existing_entry_id is None or user_input[CONF_HOST] != current_entry.data.get(
-            CONF_HOST
-        ):
-            self._async_abort_entries_match({CONF_HOST: user_input[CONF_HOST]})
+        if not host:
+            return {"base": "invalid_host"}
 
-        base_url = URL.build(
-            scheme="http" if not user_input[CONF_SSL] else "https",
-            host=user_input[CONF_HOST],
-            port=user_input[CONF_PORT],
-            user=user_input.get(CONF_USERNAME),
-            password=user_input.get(CONF_PASSWORD),
-        )
+        if existing_entry_id is None or host != current_entry.data.get(CONF_HOST):
+            self._async_abort_entries_match({CONF_HOST: host})
+
+        try:
+            base_url = URL.build(
+                scheme="http" if not user_input[CONF_SSL] else "https",
+                host=host,
+                port=user_input.get(CONF_PORT),
+                user=user_input.get(CONF_USERNAME),
+                password=user_input.get(CONF_PASSWORD),
+            )
+        except (TypeError, ValueError):
+            # yarl rejects an address it cannot represent, e.g. a second colon
+            _LOGGER.debug("Cannot build an URL for the host %r", host)
+            return {"base": "invalid_host"}
 
         session = async_create_clientsession(
             self.hass, verify_ssl=user_input[CONF_VERIFY_SSL], base_url=base_url
@@ -187,9 +251,14 @@ class AdvEnigma2ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
         if user_input is None:
             return self.async_show_form(step_id=SOURCE_USER, data_schema=CONFIG_SCHEMA)
 
+        user_input = clean_connection_input(user_input)
         if errors := await self.validate_user_input(user_input):
             return self.async_show_form(
-                step_id=SOURCE_USER, data_schema=CONFIG_SCHEMA, errors=errors
+                step_id=SOURCE_USER,
+                data_schema=self.add_suggested_values_to_schema(
+                    CONFIG_SCHEMA, user_input
+                ),
+                errors=errors,
             )
         return self.async_create_entry(data=user_input, title=user_input[CONF_HOST])
 
@@ -207,6 +276,7 @@ class AdvEnigma2ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if user_input is not None:
+            user_input = clean_connection_input(user_input)
             errors = await self.validate_user_input(user_input, entry) or {}
             if not errors:
                 return self.async_update_reload_and_abort(
@@ -243,11 +313,13 @@ class AdvEnigma2ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if user_input is not None:
-            new_data = {
-                **entry.data,
-                CONF_USERNAME: user_input.get(CONF_USERNAME),
-                CONF_PASSWORD: user_input.get(CONF_PASSWORD),
-            }
+            new_data = clean_connection_input(
+                {
+                    **entry.data,
+                    CONF_USERNAME: user_input.get(CONF_USERNAME),
+                    CONF_PASSWORD: user_input.get(CONF_PASSWORD),
+                }
+            )
             errors = await self.validate_user_input(new_data, entry) or {}
             if not errors:
                 # the credentials must belong to the box of this entry

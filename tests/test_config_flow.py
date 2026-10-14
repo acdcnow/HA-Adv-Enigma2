@@ -9,12 +9,15 @@ from homeassistant.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PORT,
+    CONF_SSL,
     CONF_USERNAME,
+    CONF_VERIFY_SSL,
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from openwebif.error import InvalidAuthError
 
+from custom_components.advenigma2.config_flow import clean_connection_input
 from custom_components.advenigma2.const import (
     CONF_DEEP_STANDBY,
     CONF_SOURCE_BOUQUET,
@@ -24,6 +27,77 @@ from tests.conftest import DEFAULT_DATA
 from tests.fakes import MAC
 
 USER_INPUT = dict(DEFAULT_DATA)
+
+
+@pytest.mark.parametrize(
+    ("host", "expected_host", "expected_port", "expected_ssl"),
+    [
+        ("192.168.1.23", "192.168.1.23", 80, False),
+        ("  192.168.1.23  ", "192.168.1.23", 80, False),
+        ("https://192.168.1.23", "192.168.1.23", 80, True),
+        ("http://192.168.1.23/", "192.168.1.23", 80, False),
+        ("192.168.1.23:8080", "192.168.1.23", 8080, False),
+        ("https://enigma2.local:8443/statusinfo", "enigma2.local", 8443, True),
+        ("enigma2.local/?query=1", "enigma2.local", 80, False),
+        ("[fe80::1]", "fe80::1", 80, False),
+        ("[fe80::1]:8080", "fe80::1", 8080, False),
+        ("fe80::1", "fe80::1", 80, False),
+    ],
+)
+def test_clean_connection_input(
+    host: str, expected_host: str, expected_port: int, expected_ssl: bool
+) -> None:
+    """An address typed the way a browser takes it is normalised.
+
+    A scheme, a port, a path or a trailing slash in the host field used to be
+    passed to `URL.build()` verbatim, which raised a `ValueError` and surfaced as
+    "Unknown error occurred" in the setup dialog.
+    """
+    cleaned = clean_connection_input(
+        {
+            CONF_HOST: host,
+            CONF_PORT: 80,
+            CONF_SSL: False,
+            CONF_VERIFY_SSL: False,
+        }
+    )
+
+    assert cleaned[CONF_HOST] == expected_host
+    assert cleaned[CONF_PORT] == expected_port
+    assert cleaned[CONF_SSL] is expected_ssl
+
+
+async def test_user_flow_accepts_an_address_with_a_scheme(
+    hass: HomeAssistant, fake_device
+) -> None:
+    """The reported setup failure: `https://10.0.0.30` in the host field."""
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": SOURCE_USER}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {**USER_INPUT, CONF_HOST: "https://192.168.1.23"}
+    )
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["title"] == "192.168.1.23"
+    assert result["data"][CONF_HOST] == "192.168.1.23"
+    assert result["data"][CONF_SSL] is True
+
+
+@pytest.mark.parametrize("host", ["", "   ", "https://", "http:///path"])
+async def test_user_flow_reports_an_unusable_address(
+    hass: HomeAssistant, host: str
+) -> None:
+    """An address without a host shows a translated error, not a traceback."""
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": SOURCE_USER}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {**USER_INPUT, CONF_HOST: host}
+    )
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["errors"] == {"base": "invalid_host"}
 
 
 async def test_user_flow_creates_an_entry(hass: HomeAssistant) -> None:

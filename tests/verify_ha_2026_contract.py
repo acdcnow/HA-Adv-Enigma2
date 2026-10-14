@@ -55,6 +55,17 @@ def section(title: str) -> None:
     print(f"\n{title}")
 
 
+def _flatten_strings(data: Any) -> list[str]:
+    """Return every string of a nested translation mapping."""
+    if isinstance(data, str):
+        return [data]
+    if isinstance(data, dict):
+        return [item for value in data.values() for item in _flatten_strings(value)]
+    if isinstance(data, list):
+        return [item for value in data for item in _flatten_strings(value)]
+    return []
+
+
 def main() -> int:
     """Run every contract check."""
     import homeassistant.const as ha_const
@@ -503,7 +514,39 @@ def main() -> int:
     for key in ("cannot_connect", "invalid_auth", "unknown"):
         check(f"error.{key} translated", key in strings["config"]["error"], strings["config"]["error"].keys())
         check(f"abort.{key} translated", key in strings["config"]["abort"], strings["config"]["abort"].keys())
+    check(
+        "error.invalid_host translated",
+        "invalid_host" in strings["config"]["error"],
+        strings["config"]["error"].keys(),
+    )
     check("abort.already_configured translated", "already_configured" in strings["config"]["abort"])
+
+    # A custom integration cannot use the `[%key:common::...%]` references of core:
+    # the frontend only resolves them for the built-in translations, so a HACS
+    # install would show the raw placeholder as the field label.
+    for locale, data in (("strings.json", strings), ("translations/en.json", json.loads((translations / "en.json").read_text(encoding="utf-8"))), ("translations/de.json", json.loads((translations / "de.json").read_text(encoding="utf-8")))):
+        references = [value for value in _flatten_strings(data) if "%key:" in value]
+        check(f"{locale} has no [%key:...%] references", not references, references)
+
+    for step in ("user", "reconfigure"):
+        for key, label in strings["config"]["step"][step]["data"].items():
+            check(
+                f"{step} field {key} has a readable label",
+                bool(label.strip()) and "%key:" not in label and not label.startswith("["),
+                label,
+            )
+
+    config_flow_source = (COMPONENT / "config_flow.py").read_text(encoding="utf-8")
+    check(
+        "every flow normalises the address before it is used",
+        config_flow_source.count("clean_connection_input(") >= 4,
+        config_flow_source.count("clean_connection_input("),
+    )
+    check(
+        "an unusable address is reported instead of raised",
+        config_flow_source.count('{"base": "invalid_host"}') >= 2,
+        config_flow_source.count('{"base": "invalid_host"}'),
+    )
     check(
         "user step documents all fields",
         set(strings["config"]["step"]["user"]["data"]) == {"host", "password", "port", "ssl", "username", "verify_ssl"},

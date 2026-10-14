@@ -1,46 +1,47 @@
 {
   "config": {
     "abort": {
-      "already_configured": "[%key:common::config_flow::abort::already_configured_device%]",
-      "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
-      "invalid_auth": "[%key:common::config_flow::error::invalid_auth%]",
-      "unknown": "[%key:common::config_flow::error::unknown%]",
+      "already_configured": "Dieses Gerät ist bereits konfiguriert.",
+      "cannot_connect": "Verbindung zur Box fehlgeschlagen.",
+      "invalid_auth": "Ungültige Anmeldung.",
+      "unknown": "Unbekannter Fehler.",
       "unique_id_mismatch": "Das ist ein anderes Gerät als das bereits konfigurierte."
     },
     "error": {
-      "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
-      "invalid_auth": "[%key:common::config_flow::error::invalid_auth%]",
-      "unknown": "[%key:common::config_flow::error::unknown%]"
+      "cannot_connect": "Verbindung zur Box fehlgeschlagen.",
+      "invalid_auth": "Ungültige Anmeldung.",
+      "invalid_host": "Ungültige Adresse. Gib den Hostnamen oder die IP-Adresse der Box ein.",
+      "unknown": "Unbekannter Fehler."
     },
     "flow_title": "{name}",
     "step": {
       "user": {
         "data": {
-          "host": "[%key:common::config_flow::data::host%]",
-          "password": "[%key:common::config_flow::data::password%]",
-          "port": "[%key:common::config_flow::data::port%]",
-          "ssl": "[%key:common::config_flow::data::ssl%]",
-          "username": "[%key:common::config_flow::data::username%]",
-          "verify_ssl": "[%key:common::config_flow::data::verify_ssl%]"
+          "host": "Host",
+          "password": "Passwort",
+          "port": "Port",
+          "ssl": "HTTPS verwenden",
+          "username": "Benutzername",
+          "verify_ssl": "SSL-Zertifikat prüfen"
         },
         "description": "Bitte gib die Verbindungsdaten deines Geräts ein."
       },
       "reconfigure": {
         "data": {
-          "host": "[%key:common::config_flow::data::host%]",
-          "password": "[%key:common::config_flow::data::password%]",
-          "port": "[%key:common::config_flow::data::port%]",
-          "ssl": "[%key:common::config_flow::data::ssl%]",
-          "username": "[%key:common::config_flow::data::username%]",
-          "verify_ssl": "[%key:common::config_flow::data::verify_ssl%]"
+          "host": "Host",
+          "password": "Passwort",
+          "port": "Port",
+          "ssl": "HTTPS verwenden",
+          "username": "Benutzername",
+          "verify_ssl": "SSL-Zertifikat prüfen"
         },
         "description": "Verbindungsdaten von {name} anpassen. Das Gerät und seine Entitäten bleiben erhalten.",
         "title": "Adv Enigma2 neu konfigurieren"
       },
       "reauth_confirm": {
         "data": {
-          "password": "[%key:common::config_flow::data::password%]",
-          "username": "[%key:common::config_flow::data::username%]"
+          "password": "Passwort",
+          "username": "Benutzername"
         },
         "description": "Gib die Zugangsdaten von {name} erneut ein.",
         "title": "Erneut anmelden"
