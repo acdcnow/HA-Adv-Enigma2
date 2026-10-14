@@ -1,7 +1,7 @@
 # Advanced Enigma2 (OpenWebif) for Home Assistant
 
 A HACS custom integration that turns an **Enigma2 receiver** (OpenATV, OpenPLi,
-OpenHDF, VTi, DreamOS, …) into a Home Assistant media player — based on the
+OpenHDF, VTi, DreamOS, …) into a Home Assistant media player  based on the
 Home Assistant core `enigma2` integration, with the domain changed to
 `advenigma2` so it can be installed and maintained independently.
 
@@ -10,44 +10,44 @@ Requires **Home Assistant 2026.10.1** or newer (`hacs.json`) and a box running
 
 ## ✨ Features
 
-* **Media player** — the current programme, channel name, description, begin/end
+* **Media player**  the current programme, channel name, description, begin/end
   time, "is recording", volume and channel icons of the running service, plus
   playback controls: volume up/down/set/mute, play, pause, stop, next/previous
   channel, source (bouquet) selection, standby and deep standby.
-* **Media browser** — browse the bouquets of the box, open a bouquet to see its
+* **Media browser**  browse the bouquets of the box, open a bouquet to see its
   channels and its recordings, and play the selected item (`play_media`), for
   example from a dashboard, an automation or a voice assistant. The `stream_url`
   attribute exposes the http stream of the running service for use in
   `camera`/`generic` cards.
-* **Buttons** — reboot, restart Enigma2, standby, deep standby, record the running
+* **Buttons**  reboot, restart Enigma2, standby, deep standby, record the running
   service now and clean up the finished timers. *Power on without waking the TV*
   uses the OpenATV 8.0 HDMI-CEC endpoint and is only available if the box
   reports support for it.
-* **Screenshot camera** — a `camera` entity that serves the current screen of the
+* **Screenshot camera**  a `camera` entity that serves the current screen of the
   box via OpenWebif `/grab`, with configurable mode (`all`, `video`, `osd`),
   format and resolution. It does **not** poke a box that is switched off.
-* **Sensors** — tuner signal (SNR in % and dB, AGC, BER, tuner type), the image
+* **Sensors**  tuner signal (SNR in % and dB, AGC, BER, tuner type), the image
   version of the box and the running/receiving programme (*now playing* with the
   current programme as attribute, *next programme* with the following one).
-* **Timers as a to-do list** — the recording timers of the box appear as a
+* **Timers as a to-do list**  the recording timers of the box appear as a
   `todo` list: complete (disabled), edit the due date/time, rename or delete a
   timer, and tick/un-tick it, all backed by `/api/timerlist` and friends.
-* **Sleep timer** — a `number` for the minutes and a `select` for what the box
+* **Sleep timer**  a `number` for the minutes and a `select` for what the box
   should do when the sleep timer expires (standby, deep standby, auto, …).
-* **Services** — `send_message` (message on the TV screen), `send_remote_control`
+* **Services**  `send_message` (message on the TV screen), `send_remote_control`
   (any key of the remote), `add_timer`, `remove_timer`, `delete_recording` and
   `rename_recording`, all targetable by device or entity.
-* **Config flow** — set up from the UI with host, port, HTTP(S), username,
+* **Config flow**  set up from the UI with host, port, HTTP(S), username,
   password and certificate verification.
-* **Reconfigure** — change the connection settings of an existing entry from
+* **Reconfigure**  change the connection settings of an existing entry from
   *Settings → Devices & services → Adv Enigma2 → Reconfigure*. The device and all
   entity IDs are kept (unlike deleting and re-adding the integration).
-* **Reauthentication** — when the box rejects the stored credentials, new login
+* **Reauthentication**  when the box rejects the stored credentials, new login
   data can be entered without touching the rest of the entry.
-* **Options** — deep standby on *Turn off*, source bouquet and channel icon as
+* **Options**  deep standby on *Turn off*, source bouquet and channel icon as
   the media image, and mode/format/resolution of the screenshot camera. Changing
   them reloads the entry immediately.
-* **Polite polling** — a box that is switched off, in deep standby or rebooting
+* **Polite polling**  a box that is switched off, in deep standby or rebooting
   is *not* polled every 30 seconds:
 
   | Failed polls | Wait before the next try |
@@ -69,7 +69,7 @@ Requires **Home Assistant 2026.10.1** or newer (`hacs.json`) and a box running
 * Home Assistant **2026.10.1** or newer (the version the integration is tested against).
 * An Enigma2 box with **OpenWebif** enabled (default port 80, usually no login).
 * The [`openwebifpy`](https://github.com/autinerd/openwebifpy) client library
-  (`openwebifpy==4.3.1`) — installed automatically from `manifest.json`.
+  (`openwebifpy==4.3.1`)  installed automatically from `manifest.json`.
 
 ## 🚀 Installation
 
@@ -111,12 +111,12 @@ custom integration and for Home Assistant 2026.10.1:
    integration has no build step that generates them from `strings.json`
    (`strings.json` kept, identical to `en.json`).
 3. `manifest.json` gained `version`, `issue_tracker` and this fork's
-   `documentation` URL — required/expected by HACS.
+   `documentation` URL  required/expected by HACS.
 4. The offline back-off described above; core retries every scan interval forever.
 5. Reconfigure and reauthentication flows; core only has *add* and *options*.
 6. Options are applied immediately.
 7. Turning the box off to deep standby no longer pins the entity to `unavailable`
-   until the next restart — the coordinator decides availability and recovers by
+   until the next restart  the coordinator decides availability and recovers by
    itself.
 8. The media player writes its state as soon as it is added; core leaves the entity
    `unknown` for up to one scan interval (30 s) after setup.
@@ -144,11 +144,11 @@ Copy-Item tests\shims\*.py .venv\Lib\site-packages\ -Force
 .\\.venv\\Scripts\\python.exe -m pytest tests -q                 # 65 unit tests
 ```
 
-* `tests/verify_ha_2026_contract.py` — asserts that every Home Assistant and
+* `tests/verify_ha_2026_contract.py`  asserts that every Home Assistant and
   openwebifpy symbol the integration uses exists in 2026.10.1, that the manifest,
   HACS metadata and translations are consistent, that every platform and service is
   wired up, and that the code does not use APIs that only exist after 2026.10.1.
-* `tests/test_*.py` — unit tests against a real `hass` fixture
+* `tests/test_*.py`  unit tests against a real `hass` fixture
   (`pytest-homeassistant-custom-component`), with the Enigma2 box replaced by
   `tests/fakes.py` and the raw OpenWebif client by `tests/fake_api.py`:
   config/reconfigure/reauth/options flows, the offline back-off, the media player
@@ -183,12 +183,12 @@ OpenWebif call backs which entity:
 **Streaming the TV picture into Home Assistant** (`streamcurrentm3u`, `streamm3u`)
 is the one item still open. The media player exposes the stream of the running
 service as the `stream_url` attribute, so a `generic`/`camera` card or an
-automation can use it — but the integration does not play the stream itself, and
+automation can use it  but the integration does not play the stream itself, and
 the box has to serve its stream port (8001) to the caller.
 
 ## 📄 License and credits
 
-GPL-3.0-or-later — see [LICENSE](LICENSE) and [NOTICE.md](NOTICE.md).
+GPL-3.0-or-later  see [LICENSE](LICENSE) and [NOTICE.md](NOTICE.md).
 
 `custom_components/advenigma2` is derived from the Home Assistant core
 [`enigma2`](https://github.com/home-assistant/core/tree/dev/homeassistant/components/enigma2)
