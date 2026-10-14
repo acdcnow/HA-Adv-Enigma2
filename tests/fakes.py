@@ -12,9 +12,20 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, ClassVar
 
+from homeassistant.util import dt as dt_util
+from yarl import URL
+
 # Service reference of "Das Erste HD", as it appears on an OpenATV box
 SERVICE_REF = "1:0:19:283D:3FB:1:C00000:0:0:0:"
+RECORDING_REF = (
+    "1:0:0:0:0:0:0:0:0:0:/media/hdd/movie/20261014 2015 - Das Erste HD - "
+    "Tagesschau.ts"
+)
 MAC = "AA:BB:CC:DD:EE:FF"
+
+# begin/end of the fixture timer, 2026-10-14 20:15 and 21:15 UTC
+TIMER_BEGIN = 1792076100
+TIMER_END = 1792079700
 
 # Shape of the /api/about response (openwebifpy 4.3.1)
 ABOUT: dict[str, Any] = {
@@ -201,6 +212,11 @@ class FakeOpenWebIfDevice:
     async def get_all_bouquets(self) -> dict[str, Any]:
         """Return the bouquet list."""
         return {"bouquets": [[SERVICE_REF, "Favourites"]]}
+
+    async def send_message(self, text: str, message_type: Any = None, timeout: int = -1) -> bool:
+        """Show a message on the TV screen."""
+        self.calls.append(("send_message", (text, message_type, timeout)))
+        return True
 
     async def close(self) -> None:
         """Close the client."""

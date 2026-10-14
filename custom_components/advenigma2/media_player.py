@@ -8,21 +8,34 @@ from aiohttp.client_exceptions import ServerDisconnectedError
 from openwebif.enums import PowerState, RemoteControlCodes, SetVolumeOption
 
 from homeassistant.components.media_player import (
+    BrowseError,
+    BrowseMedia,
+    MediaClass,
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
     MediaPlayerState,
     MediaType,
 )
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from .api import recording_uid
 from .coordinator import AdvEnigma2ConfigEntry, AdvEnigma2UpdateCoordinator
+from .entity import AdvEnigma2Entity
 
 ATTR_MEDIA_CURRENTLY_RECORDING = "media_currently_recording"
 ATTR_MEDIA_DESCRIPTION = "media_description"
 ATTR_MEDIA_END_TIME = "media_end_time"
 ATTR_MEDIA_START_TIME = "media_start_time"
+ATTR_STREAM_URL = "stream_url"
+
+# the media content types of the channel and recording browser
+MEDIA_TYPE_BOUQUET = "bouquet"
+MEDIA_TYPE_RECORDING = "recording"
+MEDIA_ID_ROOT = "root"
+MEDIA_ID_CHANNELS = "channels"
+MEDIA_ID_RECORDINGS = "recordings"
 
 _LOGGER = getLogger(__name__)
 
@@ -36,12 +49,9 @@ async def async_setup_entry(
     async_add_entities([AdvEnigma2MediaPlayer(entry.runtime_data)])
 
 
-class AdvEnigma2MediaPlayer(
-    CoordinatorEntity[AdvEnigma2UpdateCoordinator], MediaPlayerEntity
-):
+class AdvEnigma2MediaPlayer(AdvEnigma2Entity, MediaPlayerEntity):
     """Representation of an Adv Enigma2 box."""
 
-    _attr_has_entity_name = True
     _attr_name = None
 
     _attr_media_content_type = MediaType.TVSHOW
@@ -57,27 +67,13 @@ class AdvEnigma2MediaPlayer(
         | MediaPlayerEntityFeature.PAUSE
         | MediaPlayerEntityFeature.SELECT_SOURCE
         | MediaPlayerEntityFeature.PLAY
+        | MediaPlayerEntityFeature.BROWSE_MEDIA
+        | MediaPlayerEntityFeature.PLAY_MEDIA
     )
 
     def __init__(self, coordinator: AdvEnigma2UpdateCoordinator) -> None:
         """Initialize the Adv Enigma2 device."""
-
         super().__init__(coordinator)
-
-        self._attr_unique_id = coordinator.unique_id
-
-        self._attr_device_info = coordinator.device_info
-
-    @override
-    async def async_added_to_hass(self) -> None:
-        """Write the state from the already fetched data.
-
-        `CoordinatorEntity` only writes the state when the coordinator publishes
-        the next update, which would leave the entity `unknown` for a whole scan
-        interval (30 s) after the entry was set up.
-        """
-        await super().async_added_to_hass()
-        self._handle_coordinator_update()
 
     @override
     async def async_turn_off(self) -> None:
@@ -176,6 +172,110 @@ class AdvEnigma2MediaPlayer(
         await self.coordinator.device.zap(self.coordinator.device.sources[source])
         await self.coordinator.async_refresh()
 
+    @override
+    async def async_browse_media(
+        self,
+        media_content_type: str | None = None,
+        media_content_id: str | None = None,
+    ) -> BrowseMedia:
+        """Browse the bouquets, the channels and the recordings of the box."""
+        if media_content_id in (None, MEDIA_ID_ROOT):
+            title, media_class, content_type, children = (
+                self.name or "Adv Enigma2",
+                MediaClass.DIRECTORY,
+                MEDIA_ID_ROOT,
+                [
+                    self._directory("Channels", MEDIA_ID_CHANNELS),
+                    self._directory("Recordings", MEDIA_ID_RECORDINGS),
+                ],
+            )
+        elif media_content_id == MEDIA_ID_CHANNELS:
+            bouquets = await self.coordinator.device.get_all_bouquets()
+            title, media_class, content_type = "Channels", MediaClass.DIRECTORY, "bouquets"
+            children = [
+                BrowseMedia(
+                    title=name,
+                    media_class=MediaClass.DIRECTORY,
+                    media_content_id=reference,
+                    media_content_type=MEDIA_TYPE_BOUQUET,
+                    can_play=False,
+                    can_expand=True,
+                )
+                for reference, name in bouquets.get("bouquets", [])
+            ]
+        elif media_content_type == MEDIA_TYPE_BOUQUET:
+            services = await self.coordinator.api.async_get_services(media_content_id)
+            title, media_class, content_type = "Channels", MediaClass.DIRECTORY, MEDIA_TYPE_BOUQUET
+            children = [
+                BrowseMedia(
+                    title=service.get("servicename", "?"),
+                    media_class=MediaClass.CHANNEL,
+                    media_content_id=service["serviceref"],
+                    media_content_type=MediaType.CHANNEL,
+                    can_play=True,
+                    can_expand=False,
+                )
+                for service in services
+            ]
+        elif media_content_id == MEDIA_ID_RECORDINGS:
+            movies = await self.coordinator.api.async_get_recordings()
+            title, media_class, content_type = "Recordings", MediaClass.DIRECTORY, MEDIA_TYPE_RECORDING
+            children = [
+                BrowseMedia(
+                    title=movie.get("eventname")
+                    or movie.get("title")
+                    or movie.get("filename_stripped", "?"),
+                    media_class=MediaClass.MOVIE,
+                    media_content_id=recording_uid(movie),
+                    media_content_type=MEDIA_TYPE_RECORDING,
+                    can_play=True,
+                    can_expand=False,
+                )
+                for movie in movies
+            ]
+        else:
+            raise BrowseError(f"Cannot browse {media_content_id}")
+
+        return BrowseMedia(
+            title=title,
+            media_class=media_class,
+            media_content_id=media_content_id or MEDIA_ID_ROOT,
+            media_content_type=content_type,
+            can_play=False,
+            can_expand=True,
+            children=children,
+        )
+
+    def _directory(self, title: str, media_id: str) -> BrowseMedia:
+        """Return a folder of the media browser."""
+        return BrowseMedia(
+            title=title,
+            media_class=MediaClass.DIRECTORY,
+            media_content_id=media_id,
+            media_content_type=media_id,
+            can_play=False,
+            can_expand=True,
+        )
+
+    @override
+    async def async_play_media(
+        self, media_type: str, media_id: str, **kwargs: object
+    ) -> None:
+        """Tune to a channel, play a recording or tune to a stream of the box."""
+        if media_type == MediaType.CHANNEL or media_id.startswith("1:"):
+            # a channel, or a recording: OpenWebif plays a recording by zapping to
+            # the service reference of the movie
+            await self.coordinator.device.zap(media_id)
+        elif media_type == MediaType.URL:
+            # a stream url of this box, e.g. http://box:8001/1:0:19:...
+            await self.coordinator.device.zap(media_id.rsplit("/", 1)[-1])
+        else:
+            raise HomeAssistantError(
+                f"The box cannot play media of type {media_type}; use the channel "
+                "browser of this entity instead"
+            )
+        await self.coordinator.async_request_refresh()
+
     @callback
     @override
     def _handle_coordinator_update(self) -> None:
@@ -192,6 +292,15 @@ class AdvEnigma2MediaPlayer(
             }
         else:
             self._attr_extra_state_attributes = {}
+
+        # the stream url of the running channel, so that it can be handed to
+        # another media player (a recording has no stream on the box)
+        if (serviceref := self.coordinator.data.currservice.serviceref) and not str(
+            serviceref
+        ).startswith("1:0:0"):
+            self._attr_extra_state_attributes[ATTR_STREAM_URL] = (
+                self.coordinator.api.stream_url(str(serviceref))
+            )
 
         self._attr_media_title = self.coordinator.data.currservice.station
         self._attr_media_series_title = self.coordinator.data.currservice.name

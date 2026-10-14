@@ -60,5 +60,88 @@
         }
       }
     }
+  },
+  "entity": {
+    "button": {
+      "reboot": {"name": "Neustart"},
+      "restart_enigma2": {"name": "Enigma2 neu starten"},
+      "standby": {"name": "Standby"},
+      "deep_standby": {"name": "Deep-Standby"},
+      "record_now": {"name": "Jetzt aufnehmen"},
+      "cleanup_timers": {"name": "Abgelaufene Timer löschen"},
+      "power_on_without_waking_tv": {"name": "Einschalten ohne den Fernseher zu wecken"}
+    },
+    "camera": {"screenshot": {"name": "Screenshot"}},
+    "number": {"sleep_timer": {"name": "Sleeptimer"}},
+    "select": {"sleep_timer_action": {"name": "Sleeptimer-Aktion"}},
+    "sensor": {
+      "signal_snr": {"name": "Tunersignal SNR"},
+      "signal_agc": {"name": "Tunersignal AGC"},
+      "signal_ber": {"name": "Tunersignal BER"},
+      "image_version": {"name": "Image"},
+      "now_playing": {"name": "Läuft jetzt"},
+      "next_programme": {"name": "Nächste Sendung"}
+    },
+    "todo": {"timers": {"name": "Timer"}}
+  },
+  "services": {
+    "send_message": {
+      "name": "Nachricht senden",
+      "description": "Eine Nachricht am Bildschirm des Geräts anzeigen.",
+      "fields": {
+        "message": {"name": "Nachricht", "description": "Der Text, der am Bildschirm angezeigt wird."},
+        "type": {"name": "Typ", "description": "Wie die Nachricht dargestellt wird."},
+        "timeout": {"name": "Anzeigedauer", "description": "Sekunden, die die Nachricht angezeigt wird, -1 bis sie bestätigt wird."}
+      }
+    },
+    "send_remote_control": {
+      "name": "Fernbedienungstaste senden",
+      "description": "Eine Taste auf der Fernbedienung des Geräts drücken.",
+      "fields": {
+        "command": {"name": "Taste", "description": "Die Taste der Fernbedienung."},
+        "type": {"name": "Typ", "description": "Ein normaler Druck, ein langer Druck oder eine ASCII-Taste."}
+      }
+    },
+    "add_timer": {
+      "name": "Timer hinzufügen",
+      "description": "Einen Aufnahme-Timer am Gerät anlegen.",
+      "fields": {
+        "channel": {"name": "Sender", "description": "Name des Senders oder dessen Service-Referenz."},
+        "begin": {"name": "Beginn", "description": "Wann die Aufnahme startet."},
+        "end": {"name": "Ende", "description": "Wann die Aufnahme endet."},
+        "name": {"name": "Name", "description": "Name des Timers."},
+        "description": {"name": "Beschreibung"},
+        "disabled": {"name": "Deaktiviert", "description": "Den Timer deaktiviert anlegen."},
+        "justplay": {"name": "Nur einschalten", "description": "Zum Sender umschalten statt aufzunehmen."},
+        "afterevent": {"name": "Nach der Aufnahme", "description": "Was das Gerät nach der Aufnahme macht."},
+        "dirname": {"name": "Ordner", "description": "Ordner auf der Festplatte für die Aufnahme."},
+        "tags": {"name": "Tags", "description": "Durch Leerzeichen getrennte Tags für die Aufnahme."}
+      }
+    },
+    "remove_timer": {
+      "name": "Timer entfernen",
+      "description": "Einen Aufnahme-Timer am Gerät löschen.",
+      "fields": {
+        "channel": {"name": "Sender"},
+        "begin": {"name": "Beginn"},
+        "end": {"name": "Ende"}
+      }
+    },
+    "delete_recording": {
+      "name": "Aufnahme löschen",
+      "description": "Eine Aufnahme von der Festplatte des Geräts löschen.",
+      "fields": {
+        "recording": {"name": "Aufnahme", "description": "Service-Referenz der Aufnahme aus dem Medienbrowser."},
+        "force": {"name": "Erzwingen"}
+      }
+    },
+    "rename_recording": {
+      "name": "Aufnahme umbenennen",
+      "description": "Eine Aufnahme auf der Festplatte des Geräts umbenennen.",
+      "fields": {
+        "recording": {"name": "Aufnahme", "description": "Service-Referenz der Aufnahme aus dem Medienbrowser."},
+        "name": {"name": "Name", "description": "Der neue Dateiname der Aufnahme."}
+      }
+    }
   }
 }

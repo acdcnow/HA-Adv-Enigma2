@@ -17,6 +17,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.advenigma2 import config_flow, coordinator
 from custom_components.advenigma2.const import DOMAIN
+from tests.fake_api import FakeApi
 from tests.fakes import MAC, FakeOpenWebIfDevice
 
 if sys.platform == "win32":  # pragma: no cover - platform specific
@@ -46,12 +47,15 @@ def auto_enable_custom_integrations(enable_custom_integrations):
 
 @pytest.fixture(autouse=True)
 def fake_device(monkeypatch: pytest.MonkeyPatch):
-    """Replace the OpenWebIf client with the fake for every test."""
+    """Replace the OpenWebIf client and the raw API with the fakes."""
     FakeOpenWebIfDevice.reset()
+    FakeApi.reset()
     monkeypatch.setattr(coordinator, "OpenWebIfDevice", FakeOpenWebIfDevice)
+    monkeypatch.setattr(coordinator, "AdvEnigma2Api", FakeApi)
     monkeypatch.setattr(config_flow, "OpenWebIfDevice", FakeOpenWebIfDevice)
     yield FakeOpenWebIfDevice
     FakeOpenWebIfDevice.reset()
+    FakeApi.reset()
 
 
 @pytest.fixture

@@ -9,7 +9,12 @@ domain, so it can be installed and updated through HACS.
 ## Highlights
 
 * **Media player** with the current programme, channel, description, begin/end time,
-  recording state, volume, mute and channel icon.
+  recording state, volume, mute and channel icon — plus a media browser for the
+  bouquets, their channels and the recordings of the box.
+* **Everything else OpenWebif offers:** buttons (reboot, restart Enigma2, standby,
+  deep standby, record now, delete expired timers, HDMI-CEC power on), a screenshot
+  camera, signal/image/EPG sensors, the recording timers as a to-do list, the sleep
+  timer, and services for messages, remote-control keys, timers and recordings.
 * **Reconfigure** the connection (host, port, HTTP(S), credentials) without losing
   the device and entity IDs, plus a **reauthentication** flow for new credentials.
 * **Polite polling:** a box that is switched off or in deep standby is polled with a
@@ -18,5 +23,4 @@ domain, so it can be installed and updated through HACS.
 * Requires Home Assistant **2026.10.1** or newer. Verified against OpenATV 8.0.
 
 See the [README](https://github.com/acdcnow/HA-Adv-Enigma2) for installation,
-configuration and the roadmap of further OpenWebif features (timers, recordings,
-screenshots, remote control, …).
+configuration and the list of OpenWebif calls behind every entity.

@@ -14,6 +14,29 @@ Requires **Home Assistant 2026.10.1** or newer (`hacs.json`) and a box running
   time, "is recording", volume and channel icons of the running service, plus
   playback controls: volume up/down/set/mute, play, pause, stop, next/previous
   channel, source (bouquet) selection, standby and deep standby.
+* **Media browser** — browse the bouquets of the box, open a bouquet to see its
+  channels and its recordings, and play the selected item (`play_media`), for
+  example from a dashboard, an automation or a voice assistant. The `stream_url`
+  attribute exposes the http stream of the running service for use in
+  `camera`/`generic` cards.
+* **Buttons** — reboot, restart Enigma2, standby, deep standby, record the running
+  service now and clean up the finished timers. *Power on without waking the TV*
+  uses the OpenATV 8.0 HDMI-CEC endpoint and is only available if the box
+  reports support for it.
+* **Screenshot camera** — a `camera` entity that serves the current screen of the
+  box via OpenWebif `/grab`, with configurable mode (`all`, `video`, `osd`),
+  format and resolution. It does **not** poke a box that is switched off.
+* **Sensors** — tuner signal (SNR in % and dB, AGC, BER, tuner type), the image
+  version of the box and the running/receiving programme (*now playing* with the
+  current programme as attribute, *next programme* with the following one).
+* **Timers as a to-do list** — the recording timers of the box appear as a
+  `todo` list: complete (disabled), edit the due date/time, rename or delete a
+  timer, and tick/un-tick it, all backed by `/api/timerlist` and friends.
+* **Sleep timer** — a `number` for the minutes and a `select` for what the box
+  should do when the sleep timer expires (standby, deep standby, auto, …).
+* **Services** — `send_message` (message on the TV screen), `send_remote_control`
+  (any key of the remote), `add_timer`, `remove_timer`, `delete_recording` and
+  `rename_recording`, all targetable by device or entity.
 * **Config flow** — set up from the UI with host, port, HTTP(S), username,
   password and certificate verification.
 * **Reconfigure** — change the connection settings of an existing entry from
@@ -72,6 +95,7 @@ do not share a domain, a device or an entity namespace.
 | Turn off to Deep Standby | **Options** | Shuts the box down instead of standby. |
 | Bouquet to use as media source | **Options** | Limits the source list to one bouquet. |
 | Show channel icon as media image | **Options** | Channel picon instead of the standard image. |
+| Screenshot mode, format, resolution | **Options** | What the camera entity grabs (`/grab`). |
 
 The unique ID is taken from the MAC address reported by the box, so replacing the
 entry is only required if the box itself is replaced.
@@ -99,6 +123,10 @@ custom integration and for Home Assistant 2026.10.1:
    settings change does not leak one session per reload.
 10. `UpdateFailed(retry_after=…)` is used instead of the 2026.11 API
     `async_unload_platforms_or_raise`, which does not exist in 2026.10.1.
+11. Everything OpenATV 8.0 offers beyond the media player is exposed as well:
+    buttons, the screenshot camera, signal/image/EPG sensors, timers as a to-do
+    list, the sleep timer and six services (see *Features*). Core `enigma2` only
+    ships the media player.
 
 ## 🧪 Development
 
@@ -106,57 +134,56 @@ The integration is verified against a **real** Home Assistant installation:
 
 ```powershell
 python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install "homeassistant==2026.10.1" "openwebifpy==4.3.1" "pytest-homeassistant-custom-component==0.13.372"
+.\\.venv\\Scripts\\python.exe -m pip install "homeassistant==2026.10.1" "openwebifpy==4.3.1" "pytest-homeassistant-custom-component==0.13.372" "PyTurboJPEG==1.8.3"
 
 # Windows only: the Home Assistant test harness needs two POSIX modules
 Copy-Item tests\shims\*.py .venv\Lib\site-packages\ -Force
 
-.\.venv\Scripts\python.exe tests\verify_ha_2026_contract.py   # 119 API contract checks
-.\.venv\Scripts\python.exe -m pytest tests -q                 # 35 unit tests
+.\\.venv\\Scripts\\python.exe tests\\verify_ha_2026_contract.py   # 157 API contract checks
+.\\.venv\\Scripts\\python.exe -m pytest tests -q                 # 65 unit tests
 ```
 
 * `tests/verify_ha_2026_contract.py` — asserts that every Home Assistant and
   openwebifpy symbol the integration uses exists in 2026.10.1, that the manifest,
-  HACS metadata and translations are consistent, and that the code does not use
-  APIs that only exist after 2026.10.1.
+  HACS metadata and translations are consistent, that every platform and service is
+  wired up, and that the code does not use APIs that only exist after 2026.10.1.
 * `tests/test_*.py` — unit tests against a real `hass` fixture
   (`pytest-homeassistant-custom-component`), with the Enigma2 box replaced by
-  `tests/fakes.py`: config/reconfigure/reauth/options flows, the offline back-off
-  and the media player entity.
+  `tests/fakes.py` and the raw OpenWebif client by `tests/fake_api.py`:
+  config/reconfigure/reauth/options flows, the offline back-off, the media player
+  and its browser, the buttons, the camera, the sensors, the timer to-do list, the
+  sleep timer and the services.
 
 [`tests/shims/`](tests/shims) contains two no-op stand-ins for the Unix-only
 `fcntl` and `resource` modules; the official Home Assistant test harness imports
 them, so the suite cannot run on Windows without them. They are local development
 helpers only and are never shipped to Home Assistant.
 
-## 🗺️ Ideas for OpenATV 8.0 features
+## 🗺️ OpenATV 8.0 coverage
 
-OpenWebif on OpenATV 8.0 exposes more than this integration currently uses. The
-following are verified against the
-[OpenWebif API documentation](https://github.com/E2OpenPlugins/e2openplugin-OpenWebif/wiki/OpenWebif-API-documentation)
-and the `openwebifpy` client, and are candidates for future releases:
+The OpenATV 8.0 endpoints are implemented (see *Features*); this table says which
+OpenWebif call backs which entity:
 
-* **Timers** as a `todo` entity (`timerlist`, `timeradd`, `timertogglestatus`,
-  `timerdelete`, `recordnow`) — plan, disable and delete recordings from Home Assistant.
-* **Recordings** (`movielist`, `moviedelete`, `movierename`) — browse, play and
-  delete recordings, played by zapping to the movie's service reference.
-* **Screenshot camera** (`openwebifpy`'s `get_screen_grab_url`, `/grab`) — the live
-  TV picture as a camera entity (`all`/`osd`/`video`/`pip`/`lcd`).
-* **Power buttons** — reboot, restart Enigma2, deep standby, standby
-  (`PowerState.REBOOT`, `RESTART_ENIGMA`, …).
-* **Channel browser** — a hierarchical media browser (bouquet → channel) instead of
-  a flat source list, which gets unwieldy with large OpenATV channel lists.
-* **Remote control** buttons and a `send_remote_control` service (menu, EPG, back,
-  info, arrows, digits, long press).
-* **Message on the TV screen** (`message`, `messageanswer`) as a service/`notify`.
-* **Sensors** — tuner signal (`tunersignal`: SNR, SNR dB, BER, AGC), HDD free space,
-  RAM, uptime and image version.
-* **EPG now/next** sensors (`getcurrent`, `epgservicenext`).
-* **Sleep timer** (`sleeptimer`) as a number plus a standby/shutdown select.
-* **Power on without waking the TV** (HDMI-CEC, OpenATV 8.0:
-  `supports_powerup_without_waking_tv`).
-* **Stream the TV picture into Home Assistant** (`streamm3u`, `streamcurrentm3u`),
-  e.g. to cast it to a Chromecast.
+| OpenWebif call | Home Assistant |
+|---|---|
+| `getcurrent`, `epgservicenext` | `sensor.now_playing`, `sensor.next_programme` |
+| `tunersignal` | `sensor.tuner_signal_*` |
+| `getabout` | `sensor.image_version` |
+| `/grab` | `camera.screenshot` |
+| `timerlist`, `timeradd`, `timerchange`, `timertogglestatus`, `timerdelete`, `timercleanup` | `todo.timers` |
+| `recordnow` | `button.record_now` |
+| `movielist`, `moviedelete`, `movierename` | media browser (`browse_media`) |
+| `sleeptimer` | `number.sleep_timer`, `select.sleep_timer_action` |
+| `remotecontrol` | service `advenigma2.send_remote_control` |
+| `message` | service `advenigma2.send_message` |
+| power states | `media_player` (standby/deep standby) and the power buttons |
+| `supports_powerup_without_waking_tv`, `set_powerup_without_waking_tv` | `button.power_on_without_waking_the_tv` |
+
+**Streaming the TV picture into Home Assistant** (`streamcurrentm3u`, `streamm3u`)
+is the one item still open. The media player exposes the stream of the running
+service as the `stream_url` attribute, so a `generic`/`camera` card or an
+automation can use it — but the integration does not play the stream itself, and
+the box has to serve its stream port (8001) to the caller.
 
 ## 📄 License and credits
 

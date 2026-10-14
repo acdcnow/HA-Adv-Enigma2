@@ -4,6 +4,42 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-10-14
+
+Everything OpenWebif on **OpenATV 8.0** offers beyond the media player is now part
+of the integration. The new platforms are only created when the box answers, and
+they never poke a box that is switched off.
+
+### Added
+
+* **Media browser** (`browse_media` / `play_media`): bouquets → channels and
+  recordings; a selected channel is zapped, a recording is played. `stream_url`
+  exposes the http stream of the running service.
+* **Buttons**: reboot, restart Enigma2, standby, deep standby, record now, delete
+  expired timers and *power on without waking the TV* (HDMI-CEC; only available if
+  the box reports support for it).
+* **Screenshot camera**: the current screen of the box via `/grab`, with mode,
+  format and resolution configurable in the options.
+* **Sensors**: tuner signal (SNR, AGC, BER, tuner type), image version, now playing
+  (with the current programme as attribute) and next programme.
+* **Timers as a to-do list**: list, complete/disable, move, rename and delete the
+  recording timers of the box.
+* **Sleep timer**: a `number` for the minutes and a `select` for what the box does
+  when it expires.
+* **Services**: `send_message`, `send_remote_control`, `add_timer`, `remove_timer`,
+  `delete_recording`, `rename_recording` — targetable by device or entity.
+* Options for the screenshot (mode, format, resolution).
+
+### Changed
+
+* The raw OpenWebif endpoints that `openwebifpy` does not implement are called
+  through a new `api.AdvEnigma2Api` on the same aiohttp session.
+* Basic authentication uses a plain `Authorization` header built with
+  `aiohttp.encode_basic_auth()` instead of the deprecated `aiohttp.BasicAuth`
+  object.
+* Entities share one base class (`entity.AdvEnigma2Entity`) that attaches them to
+  the device of the box and writes their state as soon as they are added.
+
 ## [1.0.0] - 2026-10-14
 
 First release: the Home Assistant core `enigma2` integration under the new

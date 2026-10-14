@@ -3,8 +3,10 @@
 import asyncio
 import json
 import logging
-from typing import Final, override
+from collections.abc import Awaitable
+from typing import Any, Final, override
 
+from aiohttp import encode_basic_auth
 from aiohttp.client_exceptions import ClientError
 from openwebif.api import OpenWebIfDevice, OpenWebIfStatus
 from openwebif.error import InvalidAuthError
@@ -31,6 +33,7 @@ from homeassistant.helpers.device_registry import (
 from homeassistant.helpers.entity_component import DEFAULT_SCAN_INTERVAL
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
+from .api import AdvEnigma2Api
 from .const import CONF_SOURCE_BOUQUET, DOMAIN
 
 LOGGER = logging.getLogger(__package__)
@@ -84,6 +87,37 @@ class AdvEnigma2UpdateCoordinator(DataUpdateCoordinator[OpenWebIfStatus]):
             hass, verify_ssl=config_entry.data[CONF_VERIFY_SSL], base_url=base_url
         )
 
+        # the session belongs to this entry and is closed when it is unloaded
+        self.session = session
+
+        username = config_entry.data.get(CONF_USERNAME)
+        password = config_entry.data.get(CONF_PASSWORD)
+
+        # a base url without credentials, for the raw OpenWebif calls and for the
+        # stream url that is handed out to other integrations
+        self.base_url = URL.build(
+            scheme="http" if not config_entry.data[CONF_SSL] else "https",
+            host=config_entry.data[CONF_HOST],
+            port=config_entry.data[CONF_PORT],
+        )
+        self.api = AdvEnigma2Api(
+            session,
+            self.base_url,
+            {"Authorization": encode_basic_auth(username, password)}
+            if username or password
+            else None,
+        )
+
+        # normalised information of the box, filled during setup
+        self.about: dict[str, Any] = {}
+        self.supports_cec_power_on = False
+
+        # data of the optional OpenWebif features, refreshed by every poll
+        self.signal: dict[str, Any] | None = None
+        self.timers: list[dict[str, Any]] = []
+        self.epg: list[dict[str, Any]] = []
+        self.sleep_timer: dict[str, Any] | None = None
+
         self.device = OpenWebIfDevice(
             session, source_bouquet=config_entry.options.get(CONF_SOURCE_BOUQUET)
         )
@@ -113,6 +147,15 @@ class AdvEnigma2UpdateCoordinator(DataUpdateCoordinator[OpenWebIfStatus]):
         """Provide needed data to the device info."""
 
         about = await asyncio.wait_for(self.device.get_about(), timeout=SETUP_TIMEOUT)
+        self.about = about.get("info", {})
+        try:
+            self.supports_cec_power_on = await self.api.async_supports_cec_power_on()
+        except Exception:  # noqa: BLE001 - optional feature, must not block setup
+            LOGGER.debug(
+                "%s does not report the HDMI-CEC power on support",
+                self.host,
+                exc_info=True,
+            )
         self.device.mac_address = about["info"]["ifaces"][0]["mac"]
         self.device_info["model"] = about["info"]["model"]
         self.device_info["manufacturer"] = about["info"]["brand"]
@@ -172,7 +215,27 @@ class AdvEnigma2UpdateCoordinator(DataUpdateCoordinator[OpenWebIfStatus]):
             self.offline_failures = 0
             self.reauth_prompted = False
 
+        # Optional OpenWebif features. Their failures must never fail the poll: a
+        # box that answers statusinfo but not, for example, this endpoint simply
+        # leaves the matching entities without new data.
+        self.signal = await self._async_optional(self.api.async_get_tuner_signal())
+        self.timers = await self._async_optional(self.api.async_get_timers(), [])
+        self.epg = await self._async_optional(self.api.async_get_now_next(), [])
+        self.sleep_timer = await self._async_optional(self.api.async_get_sleep_timer())
+
         return self.device.status
+
+    async def _async_optional(
+        self, call: Awaitable[Any], default: Any = None
+    ) -> Any:
+        """Await an optional call; a failure only removes that one feature."""
+        try:
+            return await call
+        except Exception:  # noqa: BLE001 - optional data, never fail the poll
+            LOGGER.debug(
+                "Optional OpenWebif call for %s failed", self.host, exc_info=True
+            )
+            return default
 
     def _async_prompt_reauth(self) -> None:
         """Ask the user for new credentials once per outage."""

@@ -60,5 +60,88 @@
         }
       }
     }
+  },
+  "entity": {
+    "button": {
+      "reboot": {"name": "Reboot"},
+      "restart_enigma2": {"name": "Restart Enigma2"},
+      "standby": {"name": "Standby"},
+      "deep_standby": {"name": "Deep standby"},
+      "record_now": {"name": "Record now"},
+      "cleanup_timers": {"name": "Delete expired timers"},
+      "power_on_without_waking_tv": {"name": "Power on without waking the TV"}
+    },
+    "camera": {"screenshot": {"name": "Screenshot"}},
+    "number": {"sleep_timer": {"name": "Sleep timer"}},
+    "select": {"sleep_timer_action": {"name": "Sleep timer action"}},
+    "sensor": {
+      "signal_snr": {"name": "Tuner signal SNR"},
+      "signal_agc": {"name": "Tuner signal AGC"},
+      "signal_ber": {"name": "Tuner signal BER"},
+      "image_version": {"name": "Image"},
+      "now_playing": {"name": "Now playing"},
+      "next_programme": {"name": "Next programme"}
+    },
+    "todo": {"timers": {"name": "Timers"}}
+  },
+  "services": {
+    "send_message": {
+      "name": "Send a message",
+      "description": "Show a message on the TV screen of the box.",
+      "fields": {
+        "message": {"name": "Message", "description": "The text to show on the TV screen."},
+        "type": {"name": "Type", "description": "How the message is displayed."},
+        "timeout": {"name": "Timeout", "description": "Seconds the message is shown, -1 until it is dismissed."}
+      }
+    },
+    "send_remote_control": {
+      "name": "Send a remote control key",
+      "description": "Press a key on the remote control of the box.",
+      "fields": {
+        "command": {"name": "Key", "description": "The key of the remote control to press."},
+        "type": {"name": "Type", "description": "A normal press, a long press or an ASCII key."}
+      }
+    },
+    "add_timer": {
+      "name": "Add a timer",
+      "description": "Add a recording timer to the box.",
+      "fields": {
+        "channel": {"name": "Channel", "description": "Name of the channel or its service reference."},
+        "begin": {"name": "Begin", "description": "When the recording starts."},
+        "end": {"name": "End", "description": "When the recording stops."},
+        "name": {"name": "Name", "description": "Name of the timer."},
+        "description": {"name": "Description"},
+        "disabled": {"name": "Disabled", "description": "Add the timer in a disabled state."},
+        "justplay": {"name": "Just play", "description": "Tune to the channel instead of recording it."},
+        "afterevent": {"name": "After the recording", "description": "What the box does when the recording ends."},
+        "dirname": {"name": "Folder", "description": "Folder on the hard disk to store the recording in."},
+        "tags": {"name": "Tags", "description": "Space separated list of tags for the recording."}
+      }
+    },
+    "remove_timer": {
+      "name": "Remove a timer",
+      "description": "Delete a recording timer from the box.",
+      "fields": {
+        "channel": {"name": "Channel"},
+        "begin": {"name": "Begin"},
+        "end": {"name": "End"}
+      }
+    },
+    "delete_recording": {
+      "name": "Delete a recording",
+      "description": "Delete a recording from the hard disk of the box.",
+      "fields": {
+        "recording": {"name": "Recording", "description": "Service reference of the recording, from the media browser."},
+        "force": {"name": "Force"}
+      }
+    },
+    "rename_recording": {
+      "name": "Rename a recording",
+      "description": "Rename a recording on the hard disk of the box.",
+      "fields": {
+        "recording": {"name": "Recording", "description": "Service reference of the recording, from the media browser."},
+        "name": {"name": "Name", "description": "The new file name of the recording."}
+      }
+    }
   }
 }

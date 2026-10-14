@@ -10,7 +10,8 @@ from homeassistant.helpers.device_registry import format_mac
 from openwebif.enums import PowerState, RemoteControlCodes, SetVolumeOption
 
 from custom_components.advenigma2.const import DOMAIN
-from tests.fakes import MAC, SERVICE_REF
+from tests.fakes import MAC, RECORDING_REF, SERVICE_REF
+from tests.helpers import entity_id
 
 
 async def setup_entry(hass: HomeAssistant, make_entry) -> tuple[object, str]:
@@ -198,3 +199,88 @@ async def test_unload_closes_the_client(
     await hass.async_block_till_done()
 
     assert device.closed is True
+
+
+async def test_media_browser_lists_bouquets_channels_and_recordings(
+    hass: HomeAssistant, make_entry
+) -> None:
+    """The media browser walks from the bouquets down to the channels."""
+    await setup_entry(hass, make_entry)
+    entity = entity_id(hass, "media_player")
+
+    async def browse(content_id: str, content_type: str):
+        response = await hass.services.async_call(
+            "media_player",
+            "browse_media",
+            {
+                "entity_id": entity,
+                "media_content_id": content_id,
+                "media_content_type": content_type,
+            },
+            blocking=True,
+            return_response=True,
+        )
+        return response[entity]
+
+    root = await browse("root", "root")
+    assert [child.title for child in root.children] == [
+        "Channels",
+        "Recordings",
+    ]
+
+    channels = await browse("channels", "channels")
+    assert [child.title for child in channels.children] == ["Favourites"]
+
+    bouquet = await browse(channels.children[0].media_content_id, "bouquet")
+    assert [child.title for child in bouquet.children] == [
+        "Das Erste HD",
+        "ZDF HD",
+    ]
+    assert bouquet.children[0].media_content_id == SERVICE_REF
+
+    recordings = await browse("recordings", "recordings")
+    assert [child.title for child in recordings.children] == ["Tagesschau"]
+    assert recordings.children[0].media_content_id == RECORDING_REF
+
+
+async def test_play_media_tunes_a_channel_and_plays_a_recording(
+    hass: HomeAssistant, make_entry, fake_device
+) -> None:
+    """Playing from the browser zaps the box to the channel or the recording."""
+    await setup_entry(hass, make_entry)
+    entity = entity_id(hass, "media_player")
+    device = fake_device.last()
+
+    await hass.services.async_call(
+        "media_player",
+        "play_media",
+        {
+            "entity_id": entity,
+            "media_content_id": SERVICE_REF,
+            "media_content_type": "channel",
+        },
+        blocking=True,
+    )
+    await hass.services.async_call(
+        "media_player",
+        "play_media",
+        {
+            "entity_id": entity,
+            "media_content_id": RECORDING_REF,
+            "media_content_type": "recording",
+        },
+        blocking=True,
+    )
+
+    assert device.recorded("zap") == [SERVICE_REF, RECORDING_REF]
+
+
+async def test_stream_url_of_the_running_channel(
+    hass: HomeAssistant, make_entry
+) -> None:
+    """The stream url can be handed to another media player."""
+    await setup_entry(hass, make_entry)
+
+    state = hass.states.get(entity_id(hass, "media_player"))
+
+    assert state.attributes["stream_url"] == f"http://192.168.1.23:8001/{SERVICE_REF}"

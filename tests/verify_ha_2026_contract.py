@@ -287,6 +287,21 @@ def main() -> int:
     )
     check("media player entity class", has(media_player, "AdvEnigma2MediaPlayer"))
     check("PLATFORMS includes media_player", Platform.MEDIA_PLAYER in init.PLATFORMS, init.PLATFORMS)
+    for platform in (
+        Platform.MEDIA_PLAYER,
+        Platform.BUTTON,
+        Platform.CAMERA,
+        Platform.SENSOR,
+        Platform.TODO,
+        Platform.NUMBER,
+        Platform.SELECT,
+    ):
+        module = importlib.import_module(f"custom_components.advenigma2.{platform}")
+        check(f"PLATFORMS includes {platform}", platform in init.PLATFORMS, init.PLATFORMS)
+        check(
+            f"{platform} platform has an async_setup_entry",
+            callable(getattr(module, "async_setup_entry", None)),
+        )
     check(
         "async_setup_entry returns bool (2026.10.1 contract)",
         inspect.signature(init.async_setup_entry).return_annotation in (bool, "bool", "-> bool"),
@@ -348,7 +363,30 @@ def main() -> int:
         "the player is not pinned to unavailable after deep standby",
         "_attr_available = False" not in media_player_source,
     )
-    check("the player writes its state when it is added", "async_added_to_hass" in media_player_source)
+    entity_module = importlib.import_module("custom_components.advenigma2.entity")
+    check("shared entity base class", has(entity_module, "AdvEnigma2Entity"))
+    entity_source = (COMPONENT / "entity.py").read_text(encoding="utf-8")
+    check(
+        "entities write their state when they are added",
+        "async_added_to_hass" in entity_source and "_handle_coordinator_update" in entity_source,
+    )
+    entity_strings = {
+        node.value
+        for node in ast.walk(ast.parse(entity_source))
+        if isinstance(node, ast.Constant) and isinstance(node.value, str)
+    }
+    check(
+        "no deprecated via_device in the shared device info",
+        "via_device" not in entity_strings,
+        sorted(name for name in entity_strings if "via" in name),
+    )
+    check(
+        "every platform entity derives from the shared base class",
+        all(
+            "AdvEnigma2Entity" in (COMPONENT / f"{platform}.py").read_text(encoding="utf-8")
+            for platform in ("media_player", "button", "camera", "sensor", "todo", "number", "select")
+        ),
+    )
     check("turning the box on clears the back-off", "async_reset_offline_backoff" in media_player_source)
     check(
         "unloading the entry closes the OpenWebIf client",
@@ -364,6 +402,66 @@ def main() -> int:
             f"{path.name} has no `_attr_temperature_unit` style legacy attr",
             "_attr_temperature_unit" not in source,
         )
+
+    section("OpenATV 8.0 features: raw OpenWebif API and services")
+    api = importlib.import_module("custom_components.advenigma2.api")
+    services = importlib.import_module("custom_components.advenigma2.services")
+    check(
+        "api client covers the new endpoints",
+        has(
+            api.AdvEnigma2Api,
+            "screenshot_url",
+            "stream_url",
+            "async_get_image",
+            "async_get_tuner_signal",
+            "async_get_services",
+            "async_get_now_next",
+            "async_get_timers",
+            "async_add_timer",
+            "async_change_timer",
+            "async_toggle_timer",
+            "async_delete_timer",
+            "async_cleanup_timers",
+            "async_record_now",
+            "async_get_recordings",
+            "async_delete_recording",
+            "async_rename_recording",
+            "async_get_sleep_timer",
+            "async_set_sleep_timer",
+            "async_send_remote_control",
+            "async_supports_cec_power_on",
+            "async_power_on_without_waking_tv",
+        ),
+    )
+    check("api helpers", has(api, "timer_uid", "timer_due", "recording_uid", "now_next_event"))
+    check(
+        "no deprecated BasicAuth anywhere",
+        "BasicAuth"
+        not in (COMPONENT / "coordinator.py").read_text(encoding="utf-8")
+        + (COMPONENT / "api.py").read_text(encoding="utf-8"),
+    )
+
+    check(
+        "services module exposes the registration helpers",
+        has(services, "SERVICES", "async_register_services", "async_unregister_services"),
+    )
+    service_names = set(getattr(services, "SERVICES", ()))
+    expected_services = {
+        "send_message",
+        "send_remote_control",
+        "add_timer",
+        "remove_timer",
+        "delete_recording",
+        "rename_recording",
+    }
+    check("the six services are declared", service_names == expected_services, sorted(service_names))
+    service_yaml = (COMPONENT / "services.yaml").read_text(encoding="utf-8")
+    for name in sorted(expected_services):
+        check(f"services.yaml documents {name}", f"{name}:" in service_yaml)
+    check(
+        "services are registered on the domain, not on an entity platform",
+        "async_register_entity_service" not in (COMPONENT / "services.py").read_text(encoding="utf-8"),
+    )
 
     section("Manifest, HACS metadata and translations")
     manifest = json.loads((COMPONENT / "manifest.json").read_text(encoding="utf-8"))

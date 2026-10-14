@@ -1,0 +1,176 @@
+send_message:
+  name: Send a message
+  description: Show a message on the TV screen of the box.
+  fields:
+    message:
+      name: Message
+      description: The text to show on the TV screen.
+      required: true
+      example: The pizza is in the oven!
+      selector:
+        text:
+    type:
+      name: Type
+      description: How the message is displayed.
+      default: info
+      selector:
+        select:
+          options:
+            - info
+            - warning
+            - error
+            - yesno
+    timeout:
+      name: Timeout
+      description: Seconds the message is shown, -1 for until it is dismissed.
+      default: -1
+      selector:
+        number:
+          min: -1
+          max: 3600
+          unit_of_measurement: s
+          mode: box
+
+send_remote_control:
+  name: Send a remote control key
+  description: Press a key on the remote control of the box.
+  fields:
+    command:
+      name: Key
+      description: The key of the remote control to press.
+      required: true
+      example: MENU
+      selector:
+        text:
+    type:
+      name: Type
+      description: A normal press, a long press or an ASCII key.
+      default: standard
+      selector:
+        select:
+          options:
+            - standard
+            - long
+            - ascii
+
+add_timer:
+  name: Add a timer
+  description: Add a recording timer to the box.
+  fields:
+    channel:
+      name: Channel
+      description: >-
+        Name of the channel or its service reference, e.g. from the channel
+        browser of the media player.
+      required: true
+      example: Das Erste HD
+      selector:
+        text:
+    begin:
+      name: Begin
+      description: When the recording starts.
+      required: true
+      selector:
+        datetime:
+    end:
+      name: End
+      description: When the recording stops.
+      required: true
+      selector:
+        datetime:
+    name:
+      name: Name
+      description: Name of the timer.
+      required: true
+      selector:
+        text:
+    description:
+      name: Description
+      selector:
+        text:
+    disabled:
+      name: Disabled
+      description: Add the timer in a disabled state.
+      default: false
+      selector:
+        boolean:
+    justplay:
+      name: Just play
+      description: Tune to the channel instead of recording it.
+      default: false
+      selector:
+        boolean:
+    afterevent:
+      name: After the recording
+      description: What the box does when the recording ends.
+      default: auto
+      selector:
+        select:
+          options:
+            - standby
+            - deep_standby
+            - auto
+    dirname:
+      name: Folder
+      description: Folder on the hard disk to store the recording in.
+      selector:
+        text:
+    tags:
+      name: Tags
+      description: Space separated list of tags for the recording.
+      selector:
+        text:
+
+remove_timer:
+  name: Remove a timer
+  description: Delete a recording timer from the box.
+  fields:
+    channel:
+      name: Channel
+      required: true
+      selector:
+        text:
+    begin:
+      name: Begin
+      required: true
+      selector:
+        datetime:
+    end:
+      name: End
+      required: true
+      selector:
+        datetime:
+
+delete_recording:
+  name: Delete a recording
+  description: Delete a recording from the hard disk of the box.
+  fields:
+    recording:
+      name: Recording
+      description: Service reference of the recording, from the media browser.
+      required: true
+      example: "1:0:0:0:0:0:0:0:0:0:/media/hdd/movie/20261014 2015 - Das Erste HD - Tagesschau.ts"
+      selector:
+        text:
+    force:
+      name: Force
+      default: false
+      selector:
+        boolean:
+
+rename_recording:
+  name: Rename a recording
+  description: Rename a recording on the hard disk of the box.
+  fields:
+    recording:
+      name: Recording
+      description: Service reference of the recording, from the media browser.
+      required: true
+      selector:
+        text:
+    name:
+      name: Name
+      description: The new file name of the recording.
+      required: true
+      selector:
+        text:
