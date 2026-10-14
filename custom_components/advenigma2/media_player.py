@@ -2,7 +2,7 @@
 
 import contextlib
 from logging import getLogger
-from typing import override
+from typing import Any, override
 
 from aiohttp.client_exceptions import ServerDisconnectedError
 from openwebif.enums import PowerState, RemoteControlCodes, SetVolumeOption
@@ -20,7 +20,11 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from .api import recording_uid
+from .api import (
+    recording_uid,
+    service_name,
+    service_reference,
+)
 from .coordinator import AdvEnigma2ConfigEntry, AdvEnigma2UpdateCoordinator
 from .entity import AdvEnigma2Entity
 
@@ -74,6 +78,9 @@ class AdvEnigma2MediaPlayer(AdvEnigma2Entity, MediaPlayerEntity):
     def __init__(self, coordinator: AdvEnigma2UpdateCoordinator) -> None:
         """Initialize the Adv Enigma2 device."""
         super().__init__(coordinator)
+
+        # bouquets whose entries could not be used, warned about only once
+        self._warned_bouquets: set[str] = set()
 
     @override
     async def async_turn_off(self) -> None:
@@ -208,15 +215,20 @@ class AdvEnigma2MediaPlayer(AdvEnigma2Entity, MediaPlayerEntity):
             title, media_class, content_type = "Channels", MediaClass.DIRECTORY, MEDIA_TYPE_BOUQUET
             children = [
                 BrowseMedia(
-                    title=service.get("servicename", "?"),
+                    title=name,
                     media_class=MediaClass.CHANNEL,
-                    media_content_id=service["serviceref"],
+                    media_content_id=reference,
                     media_content_type=MediaType.CHANNEL,
                     can_play=True,
                     can_expand=False,
                 )
-                for service in services
+                for reference, name in (
+                    (service_reference(service), service_name(service) or "?")
+                    for service in services
+                )
+                if reference
             ]
+            self._async_warn_about_unusable_services(media_content_id, services, children)
         elif media_content_id == MEDIA_ID_RECORDINGS:
             movies = await self.coordinator.api.async_get_recordings()
             title, media_class, content_type = "Recordings", MediaClass.DIRECTORY, MEDIA_TYPE_RECORDING
@@ -245,6 +257,44 @@ class AdvEnigma2MediaPlayer(AdvEnigma2Entity, MediaPlayerEntity):
             can_expand=True,
             children=children,
         )
+
+    def _async_warn_about_unusable_services(
+        self,
+        bouquet: str,
+        services: list[dict[str, Any]],
+        children: list[BrowseMedia],
+    ) -> None:
+        """Report the entries of a bouquet that cannot be played.
+
+        A bouquet may legitimately hold entries that are not a channel (markers of
+        a sub bouquet), so only a bouquet without any usable entry is worth a
+        warning. The keys of the answer are logged as well, because they are what
+        identifies a box that answers a different shape than expected.
+        """
+        if len(children) == len(services) or bouquet in self._warned_bouquets:
+            return
+        self._warned_bouquets.add(bouquet)
+
+        keys = sorted({key for service in services for key in service})
+        if not children:
+            _LOGGER.warning(
+                "%s returned %s entr(y/ies) for the bouquet %s, but none of them "
+                "could be used (keys: %s)",
+                self.coordinator.host,
+                len(services),
+                bouquet,
+                keys,
+            )
+        else:
+            _LOGGER.debug(
+                "%s returned %s entr(y/ies) for the bouquet %s, %s of them are not "
+                "channels (keys: %s)",
+                self.coordinator.host,
+                len(services),
+                bouquet,
+                len(services) - len(children),
+                keys,
+            )
 
     def _directory(self, title: str, media_id: str) -> BrowseMedia:
         """Return a folder of the media browser."""

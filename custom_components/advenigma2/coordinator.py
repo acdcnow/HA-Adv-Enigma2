@@ -33,7 +33,7 @@ from homeassistant.helpers.device_registry import (
 from homeassistant.helpers.entity_component import DEFAULT_SCAN_INTERVAL
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .api import AdvEnigma2Api
+from .api import AdvEnigma2Api, service_name, service_reference
 from .const import CONF_SOURCE_BOUQUET, DOMAIN
 
 LOGGER = logging.getLogger(__package__)
@@ -223,7 +223,47 @@ class AdvEnigma2UpdateCoordinator(DataUpdateCoordinator[OpenWebIfStatus]):
         self.epg = await self._async_optional(self.api.async_get_now_next(), [])
         self.sleep_timer = await self._async_optional(self.api.async_get_sleep_timer())
 
+        # openwebifpy builds the source list of the media player from `/api/epgnow`
+        # and logs a warning on every poll while it stays empty, so it is filled
+        # from `/api/getservices` as soon as that happens.
+        if not self.device.sources:
+            await self._async_optional(self._async_fill_sources())
+
         return self.device.status
+
+    async def _async_fill_sources(self) -> None:
+        """Fill the device source list from the channels of a bouquet.
+
+        Some boxes (OpenATV 8.0) answer `/api/epgnow?bRef=...`, which openwebifpy
+        uses for the sources, without any event, so the media player would have no
+        sources at all and every poll would log "No sources could be loaded from
+        specified bouquet". `/api/getservices` lists the channels of a bouquet on
+        every OpenWebif version.
+        """
+        bouquet = self.config_entry.options.get(CONF_SOURCE_BOUQUET)
+        if not bouquet:
+            bouquets = (await self.device.get_all_bouquets()).get("bouquets", [])
+            bouquet = bouquets[0][0] if bouquets else None
+        if not bouquet:
+            return
+
+        sources = {
+            name: reference
+            for service in await self.api.async_get_services(bouquet)
+            if (reference := service_reference(service))
+            and (name := service_name(service))
+        }
+        if not sources:
+            LOGGER.debug("%s did not return any channel of %s", self.host, bouquet)
+            return
+
+        self.device.sources = sources
+        self.device.source_list = list(sources)
+        LOGGER.debug(
+            "Filled the source list of %s from /api/getservices (%s channels)",
+            self.host,
+            len(sources),
+        )
 
     async def _async_optional(
         self, call: Awaitable[Any], default: Any = None

@@ -23,13 +23,37 @@ from .coordinator import AdvEnigma2ConfigEntry, AdvEnigma2UpdateCoordinator
 from .entity import AdvEnigma2Entity
 
 
+def _number(value: Any) -> float | int | None:
+    """Return the value of a numeric sensor of the box, or None without one.
+
+    OpenWebif answers `/api/tunersignal` with empty strings while the tuner has no
+    lock (the box is in standby or on a channel it cannot tune). A sensor with a
+    `state_class` and a unit of measurement must not be handed a string: writing
+    `''` as its state raises a `ValueError` in Home Assistant and the entity is not
+    added at all. Such a value is reported as `unknown` instead.
+    """
+    if value is None or isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return value
+
+    text = str(value).strip()
+    if not text:
+        return None
+    try:
+        number = float(text)
+    except ValueError:
+        return None
+    return int(number) if number.is_integer() else number
+
+
 def _signal_value(key: str) -> Callable[[AdvEnigma2UpdateCoordinator], Any]:
     """Return a function that reads one value of the tuner signal."""
 
     def _value(coordinator: AdvEnigma2UpdateCoordinator) -> Any:
         if not coordinator.signal:
             return None
-        return coordinator.signal.get(key)
+        return _number(coordinator.signal.get(key))
 
     return _value
 

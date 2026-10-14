@@ -10,6 +10,8 @@ from homeassistant.helpers.device_registry import format_mac
 from openwebif.enums import PowerState, RemoteControlCodes, SetVolumeOption
 
 from custom_components.advenigma2.const import DOMAIN
+from custom_components.advenigma2.media_player import MEDIA_ID_CHANNELS
+from tests.fake_api import FakeApi
 from tests.fakes import MAC, RECORDING_REF, SERVICE_REF
 from tests.helpers import entity_id
 
@@ -241,6 +243,86 @@ async def test_media_browser_lists_bouquets_channels_and_recordings(
     recordings = await browse("recordings", "recordings")
     assert [child.title for child in recordings.children] == ["Tagesschau"]
     assert recordings.children[0].media_content_id == RECORDING_REF
+
+
+async def test_media_browser_skips_entries_it_cannot_play(
+    hass: HomeAssistant, make_entry
+) -> None:
+    """A bouquet can hold entries that are no channel, and boxes differ in spelling.
+
+    Reading `service["serviceref"]` raised a `KeyError` that Home Assistant
+    reported as "Unknown error" in the media browser when a box answered a bouquet
+    with different keys.
+    """
+    FakeApi.services = [
+        {"sRef": SERVICE_REF, "sName": "Das Erste HD"},
+        {"serviceref": "1:0:19:2B66:3F3:1:C00000:0:0:0:", "name": "ZDF HD"},
+        {"title": "Sub bouquet"},
+        {},
+    ]
+    await setup_entry(hass, make_entry)
+    entity = entity_id(hass, "media_player")
+
+    response = await hass.services.async_call(
+        "media_player",
+        "browse_media",
+        {
+            "entity_id": entity,
+            "media_content_id": MEDIA_ID_CHANNELS,
+            "media_content_type": "channels",
+        },
+        blocking=True,
+        return_response=True,
+    )
+    bouquet = response[entity].children[0]
+
+    browsed = await hass.services.async_call(
+        "media_player",
+        "browse_media",
+        {
+            "entity_id": entity,
+            "media_content_id": bouquet.media_content_id,
+            "media_content_type": "bouquet",
+        },
+        blocking=True,
+        return_response=True,
+    )
+
+    assert [child.title for child in browsed[entity].children] == [
+        "Das Erste HD",
+        "ZDF HD",
+    ]
+    assert browsed[entity].children[0].media_content_id == SERVICE_REF
+
+
+async def test_the_source_list_is_filled_when_the_box_has_no_epg(
+    hass: HomeAssistant, make_entry, fake_device
+) -> None:
+    """openwebifpy builds the sources from `/api/epgnow`, which OpenATV answers empty.
+
+    The sources are then taken from `/api/getservices`, so the media player has a
+    working source list and openwebifpy stops logging "No sources could be loaded
+    from specified bouquet" on every poll.
+    """
+    entry = make_entry()
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    device = fake_device.last()
+    device.sources = {}
+    device.source_list = []
+
+    await entry.runtime_data.async_refresh()
+    await hass.async_block_till_done()
+
+    assert device.sources == {
+        "Das Erste HD": SERVICE_REF,
+        "ZDF HD": "1:0:19:2B66:3F3:1:C00000:0:0:0:",
+    }
+    assert device.source_list == ["Das Erste HD", "ZDF HD"]
+    assert hass.states.get(entity_id(hass, "media_player")).attributes[
+        "source_list"
+    ] == ["Das Erste HD", "ZDF HD"]
 
 
 async def test_play_media_tunes_a_channel_and_plays_a_recording(

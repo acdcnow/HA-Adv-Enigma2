@@ -4,6 +4,31 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1b1] - 2026-10-14
+
+### Fixed
+
+* **The tuner signal sensors no longer fail to be added.** A tuner without a lock
+  (the box in standby, or on a channel it cannot tune) is answered by OpenWebif
+  with empty strings, and a sensor with `state_class: measurement` and a unit may
+  not be handed one: `ValueError: Sensor sensor.…_tunersignal_snr has device class
+  'None', state class 'measurement' unit '%' … however, it has the non-numeric
+  value: ''`. The values are now coerced to a number, and to `unknown` when the
+  box has none.
+* **The channel browser no longer fails with a `KeyError`.** `/api/getservices`
+  answers a bouquet in different key spellings depending on the OpenWebif version
+  (`serviceref`/`sRef`, `servicename`/`sName`), and a bouquet can hold entries that
+  are not a channel at all. Reading `service["serviceref"]` directly turned that
+  into "Unknown error" in the media browser; the entries are now read tolerantly
+  and unusable ones are skipped (and reported once, with the keys the box
+  answered, so a wrong shape stays diagnosable).
+* **The media player gets a source list, and openwebifpy stops warning.**
+  openwebifpy builds the sources from `/api/epgnow?bRef=…`, which some boxes
+  (OpenATV 8.0) answer without events, so the source list stayed empty and
+  `No sources could be loaded from specified bouquet.` was logged on **every**
+  poll. When that happens the sources are now filled from `/api/getservices` of
+  the configured (or first) bouquet, which every OpenWebif version answers.
+
 ## [1.1.1b0] - 2026-10-14
 
 ### Fixed

@@ -58,3 +58,38 @@ async def test_sensors_without_data(hass: HomeAssistant, make_entry) -> None:
         "unknown"
     )
     assert hass.states.get(entity_id(hass, "sensor", "now_playing")).state == "unknown"
+
+
+async def test_empty_tuner_signal_does_not_break_the_sensors(
+    hass: HomeAssistant, make_entry
+) -> None:
+    """A tuner without a lock answers empty strings instead of numbers.
+
+    `state_class: measurement` and a unit tell Home Assistant that the sensor has a
+    numeric value, so writing `''` raised a `ValueError` and not one of the signal
+    sensors was added (`Sensor sensor.10_0_0_30_tunersignal_snr ... has the
+    non-numeric value: ''`).
+    """
+    from tests.fake_api import FakeApi
+
+    FakeApi.signal = {"snr": "", "snr_db": "", "agc": "", "ber": ""}
+    await setup_entry(hass, make_entry)
+
+    for name in ("tuner_signal_snr", "tuner_signal_agc", "tuner_signal_ber"):
+        assert hass.states.get(entity_id(hass, "sensor", name)).state == "unknown"
+
+
+async def test_tuner_signal_accepts_numbers_as_text(
+    hass: HomeAssistant, make_entry
+) -> None:
+    """OpenWebif sends the signal values as strings."""
+    from tests.fake_api import FakeApi
+
+    FakeApi.signal = {"snr": "84", "agc": "66.5", "ber": "0", "snr_db": "12.4"}
+    await setup_entry(hass, make_entry)
+
+    assert hass.states.get(entity_id(hass, "sensor", "tuner_signal_snr")).state == "84"
+    assert hass.states.get(entity_id(hass, "sensor", "tuner_signal_agc")).state == (
+        "66.5"
+    )
+    assert hass.states.get(entity_id(hass, "sensor", "tuner_signal_ber")).state == "0"

@@ -323,3 +323,29 @@ def now_next_event(events: list[dict[str, Any]], index: int) -> dict[str, Any] |
     if len(events) > index:
         return events[index]
     return None
+
+
+# `/api/getservices` answers a list of services, but the exact keys differ between
+# OpenWebif versions (and a bouquet can hold entries that are not a service at all),
+# so both the reference and the name are looked up in every spelling used.
+SERVICE_REFERENCE_KEYS = ("serviceref", "sRef", "serviceReference", "ref", "reference")
+SERVICE_NAME_KEYS = ("servicename", "sName", "serviceName", "name", "title")
+
+
+def _first_key(item: Mapping[str, Any], keys: tuple[str, ...]) -> str | None:
+    """Return the first non-empty value of `keys` in `item`."""
+    for key in keys:
+        value = item.get(key)
+        if value:
+            return str(value)
+    return None
+
+
+def service_reference(service: Mapping[str, Any]) -> str | None:
+    """Return the service reference of a `/api/getservices` entry."""
+    return _first_key(service, SERVICE_REFERENCE_KEYS)
+
+
+def service_name(service: Mapping[str, Any]) -> str | None:
+    """Return the channel name of a `/api/getservices` entry."""
+    return _first_key(service, SERVICE_NAME_KEYS)

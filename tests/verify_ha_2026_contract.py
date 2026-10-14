@@ -474,6 +474,25 @@ def main() -> int:
         "async_register_entity_service" not in (COMPONENT / "services.py").read_text(encoding="utf-8"),
     )
 
+    # Payload shapes that differ between boxes must never be indexed with a hard key:
+    # `service["serviceref"]` raised a KeyError, and an empty `/api/tunersignal`
+    # answer raised a ValueError while Home Assistant added the signal sensors.
+    media_player_source = (COMPONENT / "media_player.py").read_text(encoding="utf-8")
+    check(
+        "the channel browser tolerates a bouquet answer with other keys",
+        'service["serviceref"]' not in media_player_source
+        and "service_reference(" in media_player_source,
+    )
+    sensor_source = (COMPONENT / "sensor.py").read_text(encoding="utf-8")
+    check(
+        "numeric sensors coerce an empty answer to None",
+        "_number(" in sensor_source and "return _number(" in sensor_source,
+    )
+    check(
+        "the source list is filled when the box has no EPG for a bouquet",
+        "_async_fill_sources" in coordinator_source,
+    )
+
     section("Manifest, HACS metadata and translations")
     manifest = json.loads((COMPONENT / "manifest.json").read_text(encoding="utf-8"))
     check("manifest domain", manifest["domain"] == DOMAIN, manifest["domain"])
