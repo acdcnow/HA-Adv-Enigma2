@@ -1,4 +1,4 @@
-# Adv Enigma2 (OpenWebif) for Home Assistant
+# Advanced Enigma2 (OpenWebif) for Home Assistant
 
 A HACS custom integration that turns an **Enigma2 receiver** (OpenATV, OpenPLi,
 OpenHDF, VTi, DreamOS, …) into a Home Assistant media player — based on the
