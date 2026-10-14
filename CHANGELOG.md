@@ -4,6 +4,18 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1b2] - 2026-10-14
+
+### Fixed
+
+* The source list fallback of 1.1.1b1 is **capped at three attempts** per reachable
+  period. Without the cap, a box that has no channel to report would have been
+  asked twice on every scan interval instead of logging the warning, and a box that
+  was still booting would have burned the attempts before it could answer. The
+  budget is reset as soon as the box answers again after an outage.
+
+This release supersedes 1.1.1b1.
+
 ## [1.1.1b1] - 2026-10-14
 
 ### Fixed

@@ -47,6 +47,11 @@ SETUP_TIMEOUT = 10
 # goes away (and again when it comes back), not once per scan interval.
 OFFLINE_RETRY_DELAYS: Final[tuple[int, ...]] = (30, 60, 120, 300, 600)
 
+# How many polls may be spent on building the source list of the media player from
+# `/api/getservices` while the box reports no sources at all. The cap keeps a box
+# that has no channel to report from being asked on every scan interval.
+MAX_SOURCE_FILL_ATTEMPTS: Final = 3
+
 
 def offline_retry_delay(failures: int) -> int:
     """Return the delay before the next poll after `failures` failed attempts."""
@@ -138,6 +143,9 @@ class AdvEnigma2UpdateCoordinator(DataUpdateCoordinator[OpenWebIfStatus]):
         # flow on every poll
         self.reauth_prompted = False
 
+        # how often the source list was tried to be filled from `/api/getservices`
+        self.source_fill_attempts = 0
+
         # set the unique ID for the entities to the config entry unique ID
         # for devices that don't report a MAC address
         self.unique_id = config_entry.unique_id
@@ -214,6 +222,8 @@ class AdvEnigma2UpdateCoordinator(DataUpdateCoordinator[OpenWebIfStatus]):
             )
             self.offline_failures = 0
             self.reauth_prompted = False
+            # a box that was offline may only now report its channels
+            self.source_fill_attempts = 0
 
         # Optional OpenWebif features. Their failures must never fail the poll: a
         # box that answers statusinfo but not, for example, this endpoint simply
@@ -225,8 +235,14 @@ class AdvEnigma2UpdateCoordinator(DataUpdateCoordinator[OpenWebIfStatus]):
 
         # openwebifpy builds the source list of the media player from `/api/epgnow`
         # and logs a warning on every poll while it stays empty, so it is filled
-        # from `/api/getservices` as soon as that happens.
-        if not self.device.sources:
+        # from `/api/getservices` as soon as that happens. The attempts are capped:
+        # a box that has no channel to report must not be asked on every poll, and
+        # a box that was still booting gets a fresh budget when it answers again.
+        if (
+            not self.device.sources
+            and self.source_fill_attempts < MAX_SOURCE_FILL_ATTEMPTS
+        ):
+            self.source_fill_attempts += 1
             await self._async_optional(self._async_fill_sources())
 
         return self.device.status

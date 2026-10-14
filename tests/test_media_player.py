@@ -325,6 +325,30 @@ async def test_the_source_list_is_filled_when_the_box_has_no_epg(
     ] == ["Das Erste HD", "ZDF HD"]
 
 
+async def test_the_source_list_fallback_gives_up(
+    hass: HomeAssistant, make_entry, fake_device
+) -> None:
+    """A box that reports no channel at all is not asked on every poll.
+
+    The fallback must not replace the log warning of openwebifpy with two extra
+    requests per scan interval, so it is capped.
+    """
+    FakeApi.services = []
+    entry = make_entry()
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    device = fake_device.last()
+    device.sources = {}
+    device.source_list = []
+
+    for _ in range(6):
+        await entry.runtime_data.async_refresh()
+
+    assert len(FakeApi.last().recorded("get_services")) == 3
+    assert device.sources == {}
+
+
 async def test_play_media_tunes_a_channel_and_plays_a_recording(
     hass: HomeAssistant, make_entry, fake_device
 ) -> None:
