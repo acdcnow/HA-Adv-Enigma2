@@ -374,8 +374,15 @@ def main() -> int:
     check("manifest iot_class", manifest.get("iot_class") == "local_polling")
     check("manifest integration_type", manifest.get("integration_type") == "device")
     check("manifest codeowners", manifest.get("codeowners") == ["@acdcnow"])
-    check("manifest documentation points at the fork", "HA-Adv-emigma2" in manifest.get("documentation", ""))
-    check("manifest issue_tracker", "HA-Adv-emigma2" in manifest.get("issue_tracker", ""))
+    repo_name = "ha-adv-enigma2"
+    check(
+        "manifest documentation points at the fork",
+        repo_name in manifest.get("documentation", "").lower(),
+    )
+    check(
+        "manifest issue_tracker points at the fork",
+        repo_name in manifest.get("issue_tracker", "").lower(),
+    )
 
     hacs = json.loads((ROOT / "hacs.json").read_text(encoding="utf-8"))
     check("hacs.json name", isinstance(hacs.get("name"), str), hacs)

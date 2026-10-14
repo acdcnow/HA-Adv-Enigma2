@@ -17,6 +17,6 @@ domain, so it can be installed and updated through HACS.
   the outage is logged once, and polling returns to normal as soon as the box answers.
 * Requires Home Assistant **2026.10.1** or newer. Verified against OpenATV 8.0.
 
-See the [README](https://github.com/acdcnow/HA-Adv-emigma2) for installation,
+See the [README](https://github.com/acdcnow/HA-Adv-Enigma2) for installation,
 configuration and the roadmap of further OpenWebif features (timers, recordings,
 screenshots, remote control, …).

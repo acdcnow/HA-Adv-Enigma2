@@ -52,7 +52,7 @@ Requires **Home Assistant 2026.10.1** or newer (`hacs.json`) and a box running
 ### HACS
 
 1. HACS → *Integrations* → ⋯ → **Custom repositories**.
-2. Add `https://github.com/acdcnow/HA-Adv-emigma2`, category **Integration**.
+2. Add `https://github.com/acdcnow/HA-Adv-Enigma2`, category **Integration**.
 3. Install **Adv Enigma2 (OpenWebif)** and restart Home Assistant.
 4. *Settings → Devices & services → Add integration → Adv Enigma2 (OpenWebif)*.
 

@@ -5,10 +5,10 @@
     "@acdcnow"
   ],
   "config_flow": true,
-  "documentation": "https://github.com/acdcnow/HA-Adv-emigma2",
+  "documentation": "https://github.com/acdcnow/HA-Adv-Enigma2",
   "integration_type": "device",
   "iot_class": "local_polling",
-  "issue_tracker": "https://github.com/acdcnow/HA-Adv-emigma2/issues",
+  "issue_tracker": "https://github.com/acdcnow/HA-Adv-Enigma2/issues",
   "loggers": [
     "openwebif"
   ],
