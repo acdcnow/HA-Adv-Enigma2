@@ -45,7 +45,8 @@ Requires **Home Assistant 2026.10.1** or newer (`hacs.json`) and a box running
 * **Reauthentication** — when the box rejects the stored credentials, new login
   data can be entered without touching the rest of the entry.
 * **Options** — deep standby on *Turn off*, source bouquet and channel icon as
-  the media image. Changing them reloads the entry immediately.
+  the media image, and mode/format/resolution of the screenshot camera. Changing
+  them reloads the entry immediately.
 * **Polite polling** — a box that is switched off, in deep standby or rebooting
   is *not* polled every 30 seconds:
 
